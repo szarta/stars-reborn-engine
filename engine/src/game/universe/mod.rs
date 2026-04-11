@@ -206,6 +206,20 @@ fn shuffle<T>(v: &mut [T], rng: &mut StdRng) {
 }
 
 // ---------------------------------------------------------------------------
+// Planet name pool (embedded at compile time)
+// ---------------------------------------------------------------------------
+
+/// The planet name pool — the original 999 names from the original game.
+/// Loaded from the text file at compile time.
+static PLANET_NAMES: std::sync::LazyLock<Vec<&'static str>> = std::sync::LazyLock::new(|| {
+    include_str!("../../../data/planet_names/original.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect()
+});
+
+// ---------------------------------------------------------------------------
 // Unit tests
 // ---------------------------------------------------------------------------
 
@@ -267,17 +281,3 @@ mod tests {
         assert!(u.planets.len() >= 50);
     }
 }
-
-// ---------------------------------------------------------------------------
-// Planet name pool (embedded at compile time)
-// ---------------------------------------------------------------------------
-
-/// The planet name pool — the original 999 names from the original game.
-/// Loaded from the text file at compile time.
-static PLANET_NAMES: std::sync::LazyLock<Vec<&'static str>> = std::sync::LazyLock::new(|| {
-    include_str!("../../../data/planet_names/original.txt")
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty())
-        .collect()
-});

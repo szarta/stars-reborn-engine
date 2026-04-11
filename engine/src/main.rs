@@ -18,7 +18,11 @@ async fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or_else(|| "127.0.0.1:8080".parse().unwrap());
 
-    log::info!("stars-server v{} listening on {}", stars_engine::VERSION, addr);
+    log::info!(
+        "stars-server v{} listening on {}",
+        stars_engine::VERSION,
+        addr
+    );
 
     let app = stars_engine::http::router();
 
@@ -26,7 +30,5 @@ async fn main() {
         .await
         .expect("failed to bind to address");
 
-    axum::serve(listener, app)
-        .await
-        .expect("server error");
+    axum::serve(listener, app).await.expect("server error");
 }

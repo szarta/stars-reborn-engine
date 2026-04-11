@@ -53,10 +53,7 @@ pub fn router() -> Router {
             "/games/:game_id/turns/:year/orders/:pid",
             put(submit_orders),
         )
-        .route(
-            "/games/:game_id/turns/:year/skip/:pid",
-            post(skip_player),
-        )
+        .route("/games/:game_id/turns/:year/skip/:pid", post(skip_player))
         .route(
             "/games/:game_id/turns/:year/ai-orders/:pid",
             get(get_ai_orders),

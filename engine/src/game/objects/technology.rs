@@ -1,14 +1,14 @@
-/// Technology data model
-///
-/// Mirrors the original game's technology class hierarchy.
-/// Data values are sourced from the legacy Python engine (stars_reborn/data/factory.py);
-/// all require oracle verification against stars.exe before the engine relies on them.
-///
-/// See stars-reborn-design/docs/mechanics/ship_design.rst
-///     stars-reborn-design/docs/mechanics/starbase_design.rst
-///     stars-reborn-design/docs/reference/engines.rst
-///     stars-reborn-design/docs/reference/ship_hulls.rst
-///     stars-reborn-design/docs/reference/starbase_hulls.rst
+// Technology data model
+//
+// Mirrors the original game's technology class hierarchy.
+// Data values are sourced from the legacy Python engine (stars_reborn/data/factory.py);
+// all require oracle verification against stars.exe before the engine relies on them.
+//
+// See stars-reborn-design/docs/mechanics/ship_design.rst
+//     stars-reborn-design/docs/mechanics/starbase_design.rst
+//     stars-reborn-design/docs/reference/engines.rst
+//     stars-reborn-design/docs/reference/ship_hulls.rst
+//     stars-reborn-design/docs/reference/starbase_hulls.rst
 
 // ---------------------------------------------------------------------------
 // Tech requirements and costs
