@@ -1,0 +1,102 @@
+Conifer
+Cypress
+Pine
+Podocarp
+Yew
+Cycad
+Maidenhair
+Maple
+Agave
+Cashew
+Apple
+Dogbane
+Holly
+Ginseng
+Palm
+Asophodel
+Composite
+Barberry
+Birch
+Trumpet Creeper
+Bombax
+Borage
+Bursera
+Box
+Wild Cinnamon
+Hemp
+Caper
+Honeysuckle
+Papaya
+Casuarina
+Bittersweet
+Katsura
+Coco Plum
+St. John's Wort
+Combretum
+Dogwood
+Titi
+Davidson's Plum
+Ebony
+Oleaster
+Heath
+Spurge
+Legume
+Beech
+Gooseberry
+Witch Hazel
+Buckeye
+Anise
+Walnut
+Laurel
+Lecythis
+Loosestrife
+Magnolia
+Malpighia
+Mallow
+Melastome
+Mahogany
+Mulberry
+Moringa
+Strawberry
+Myoporum
+Bayberry
+Myrsine
+Myrtle
+Southern Beech
+Four O'Clock
+Sourgum
+Olax
+Olive
+Wood Sorrel
+Screwpine
+Poppy
+Gooseberry
+Pittosporum
+Sycamore
+Grass
+Knotweed
+Protea
+Pomegranate
+Buckthorn
+Mangrove
+Rose
+Madder
+Citrus
+Willow
+Soapberry
+Sapodilla
+Quassia
+Nightshade
+Bladdernut
+Sterculia
+Bird of Paradise
+Storax
+Bay Cedar
+Sweetleaf
+Tamarisk
+Tea
+Theophrasta
+Mezereum
+Basswood
+Elm
+Verbena

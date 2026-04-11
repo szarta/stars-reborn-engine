@@ -1,0 +1,20 @@
+127.0.0.1
+192.168.0.1
+867-5309
+90210
+A5A5A5A5
+CAFED00D
+DEADBEEF
+NaN
+NULL
+1234
+79750
+88730
+Phi
+Pi
+Infinity
+Zero
+Absolute Zero
+Speed of Light
+QWERTY
+DVORAK

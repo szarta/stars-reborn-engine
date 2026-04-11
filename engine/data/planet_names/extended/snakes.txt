@@ -1,0 +1,70 @@
+Adder
+Death Adder
+Anaconda
+Asp
+Python
+Boa
+Boomslang
+Boiga
+Canebrake
+Cantil
+Cascabel
+Cascavel
+Cat Snake
+Cobra
+Copperhead
+Coral
+Cottonmouth
+Flying Snake
+Garter
+Gopher
+Habu
+Harlequin
+Herald
+Hognose
+Hoop
+Indigo
+Keelback
+King
+Krait
+Lancehead
+Lora
+Lyre
+Machete Savane
+Black Mamba
+Mamushi
+Mangrove
+Moccasin
+Montpellier
+Mud
+Mussurana
+Nichell
+Texas Night
+Parrot
+Patchnose
+Perrotet
+Pine
+Pipe
+Python
+Queen
+Racer
+Raddysnake
+Rattlesnake
+Ribbon
+Rinkhals
+River Jack
+Sea Snake
+Sidewinder
+Smooth
+Sonoran
+Sunbeam
+Taipan
+Tentacle
+Tiger
+Tree Snake
+Urutu
+Water Moccasin
+Wutu
+Xanider
+Zebra
+

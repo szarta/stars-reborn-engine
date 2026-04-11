@@ -1,0 +1,8 @@
+Ada
+Knuth
+Asimov
+Einstein
+Heinlein
+Turing
+Stallman
+Torvalds

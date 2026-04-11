@@ -1,0 +1,11 @@
+Square
+Rectangle
+Quadrilateral
+Polyhedron
+Helix
+Cube
+Cone
+Pentagon
+Octogon
+Hexagon
+Pixel

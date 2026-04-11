@@ -1,0 +1,29 @@
+[package]
+name = "stars-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Turn engine, AI, and universe generation for Stars Reborn"
+license = "MIT"
+
+[lib]
+name = "stars_engine"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "stars-server"
+path = "src/main.rs"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+bitflags = "2"
+log = "0.4"
+env_logger = "0.11"
+
+[dev-dependencies]
+# nothing yet
+# [profile.*] sections belong in the workspace root Cargo.toml
