@@ -129,6 +129,13 @@ pub enum LeftoverSpend {
 /// One habitat axis (gravity, temperature, or radiation).
 /// If `immune` is true, `min` and `max` are absent.
 /// Units: gravity in g, temperature in °C, radiation in mR/yr (0–100).
+///
+/// `min_idx` / `max_idx` carry the raw 0–100 index from the original Stars!
+/// binary file.  They are optional: data that originates from the race wizard
+/// (typed in, not loaded from a .r1) may omit them, in which case the engine
+/// derives the index from the physical value.  When present they are
+/// authoritative and bypass the physical→index round-trip (which is lossy for
+/// gravity because several adjacent indices share the same display value).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HabAxis {
     pub immune: bool,
@@ -136,6 +143,12 @@ pub struct HabAxis {
     pub min: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max: Option<f64>,
+    /// Raw Stars! internal index (0–100).  Authoritative when present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_idx: Option<u32>,
+    /// Raw Stars! internal index (0–100).  Authoritative when present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_idx: Option<u32>,
 }
 
 impl HabAxis {
@@ -144,6 +157,8 @@ impl HabAxis {
             immune: true,
             min: None,
             max: None,
+            min_idx: None,
+            max_idx: None,
         }
     }
     pub fn range(min: f64, max: f64) -> Self {
@@ -151,6 +166,8 @@ impl HabAxis {
             immune: false,
             min: Some(min),
             max: Some(max),
+            min_idx: None,
+            max_idx: None,
         }
     }
 }

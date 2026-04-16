@@ -57,9 +57,18 @@ fn rad_to_idx(rad: f64) -> i32 {
 
 /// Convert a HabAxis to (low_idx, high_idx) in 0-100 index space.
 /// Returns (50, 50) for immune axes; the caller uses numIterations=1 for immune.
+///
+/// Prefers `axis.min_idx` / `axis.max_idx` (raw Stars! file indices) when they
+/// are present, because the physical→index round-trip for gravity is lossy:
+/// several adjacent indices share the same display value (e.g. both index 9 and
+/// index 10 decode to 0.17 g).  Wizard-created races that omit the raw fields
+/// fall back to the physical-value conversion.
 fn axis_to_idx(axis: &HabAxis, axis_type: usize) -> (i32, i32) {
     if axis.immune {
         return (50, 50);
+    }
+    if let (Some(lo), Some(hi)) = (axis.min_idx, axis.max_idx) {
+        return (lo as i32, hi as i32);
     }
     let min = axis.min.unwrap_or(0.0);
     let max = axis.max.unwrap_or(100.0);
@@ -635,4 +644,98 @@ pub fn advantage_points(race: &Race) -> i32 {
     }
 
     (points / 3) as i32
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::objects::race::{
+        Economy, HabAxis, HabPreferences, Lrt, Prt, Race, ResearchCosts, TechCost,
+    };
+
+    /// Build a minimal Race that matches the Rabbitoid default race from the
+    /// Stars! binary (.r1) file, including the raw gravity indices.
+    ///
+    /// The key regression case: Rabbitoid has gravity low = raw index 10, which
+    /// corresponds to 0.17 g.  GRAV_CENTI[9] == GRAV_CENTI[10] == 17, so a
+    /// naïve grav_to_idx(0.17) would return index 9 instead of 10, shifting
+    /// the hab center by 1 and producing a wrong advantage point total (28
+    /// instead of 32).  The raw index fields must be used to avoid this.
+    fn rabbitoid() -> Race {
+        Race {
+            format_version: 1,
+            name: "Rabbitoid".into(),
+            plural_name: "Rabbitoids".into(),
+            prt: Prt::It,
+            lrts: vec![Lrt::IFE, Lrt::TT, Lrt::CE, Lrt::NAS],
+            hab: HabPreferences {
+                gravity: HabAxis {
+                    immune: false,
+                    min: Some(0.17),
+                    max: Some(1.24),
+                    min_idx: Some(10), // raw .r1 byte — MUST be 10, not 9
+                    max_idx: Some(56),
+                },
+                temperature: HabAxis {
+                    immune: false,
+                    min: Some(-60.0),
+                    max: Some(124.0),
+                    min_idx: Some(35),
+                    max_idx: Some(81),
+                },
+                radiation: HabAxis {
+                    immune: false,
+                    min: Some(13.0),
+                    max: Some(53.0),
+                    min_idx: Some(13),
+                    max_idx: Some(53),
+                },
+            },
+            economy: Economy {
+                resource_production: 1000,
+                factory_production: 10,
+                factory_cost: 9,
+                factory_cheap_germanium: true,
+                colonists_operate_factories: 17,
+                mine_production: 10,
+                mine_cost: 9,
+                colonists_operate_mines: 10,
+                growth_rate: 20,
+            },
+            research_costs: ResearchCosts {
+                energy: TechCost::Expensive,
+                weapons: TechCost::Expensive,
+                propulsion: TechCost::Cheap,
+                construction: TechCost::Normal,
+                electronics: TechCost::Normal,
+                biotechnology: TechCost::Cheap,
+                expensive_tech_start_at_3: false,
+            },
+            leftover_spend: Default::default(),
+            icon_index: 0,
+        }
+    }
+
+    #[test]
+    fn test_rabbitoid_advantage_points() {
+        // Oracle: Stars! race editor shows 32 for this race design.
+        assert_eq!(advantage_points(&rabbitoid()), 32);
+    }
+
+    /// Verify that the raw-index fallback still works: without min_idx/max_idx
+    /// the engine falls back to physical→index conversion.  Rabbitoid WITHOUT
+    /// raw indices should give 28 (the wrong value) — documenting the known
+    /// limitation for wizard-created races that hit the gravity duplicate.
+    #[test]
+    fn test_rabbitoid_without_raw_idx_gives_known_wrong_value() {
+        let mut race = rabbitoid();
+        race.hab.gravity.min_idx = None;
+        race.hab.gravity.max_idx = None;
+        // Without raw indices the fallback grav_to_idx(0.17) returns index 9
+        // (not 10) because both share the same centi-g value.  The resulting
+        // advantage point total is off by 4.
+        assert_eq!(advantage_points(&race), 28);
+    }
 }
