@@ -29,7 +29,10 @@ use axum::{
     routing::{get, post, put},
     Json, Router,
 };
+use serde::Serialize;
 use serde_json::{json, Value};
+
+use crate::game::objects::{advantage_points::advantage_points, race::Race};
 
 /// Build and return the axum Router with all routes registered.
 pub fn router() -> Router {
@@ -41,6 +44,8 @@ pub fn router() -> Router {
         .route("/model/race/traits", get(model_race_traits))
         .route("/model/ships/hulls", get(model_ship_hulls))
         .route("/model/schemas", get(model_schemas))
+        // Race design utilities
+        .route("/race/validate", post(race_validate))
         // Game endpoints (stateful)
         .route("/games", post(create_game))
         .route("/games/:game_id", get(get_game))
@@ -105,6 +110,29 @@ async fn model_schemas() -> impl IntoResponse {
         StatusCode::NOT_IMPLEMENTED,
         Json(json!({"error": "not yet implemented"})),
     )
+}
+
+// ---------------------------------------------------------------------------
+// Race design handlers
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct RaceValidateResponse {
+    advantage_points: i32,
+    valid: bool,
+}
+
+/// POST /race/validate
+///
+/// Accepts a race JSON body and returns the advantage point total and whether
+/// the race design is valid (points ≥ 0).  The UI calls this endpoint live as
+/// the player adjusts race designer settings.
+async fn race_validate(Json(race): Json<Race>) -> impl IntoResponse {
+    let points = advantage_points(&race);
+    Json(RaceValidateResponse {
+        advantage_points: points,
+        valid: points >= 0,
+    })
 }
 
 // ---------------------------------------------------------------------------

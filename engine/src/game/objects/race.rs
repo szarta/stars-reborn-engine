@@ -81,13 +81,16 @@ pub enum Lrt {
 
 // ── Research cost multiplier ──────────────────────────────────────────────────
 
-/// Per-field research cost multiplier.  Stored as a byte in the .r1 struct:
-/// 0 = Expensive, 1 = Normal, 2 = Cheap.
+/// Per-field research cost multiplier.
+/// Byte values in .r1: 0 = Expensive (175% of base), 1 = Normal (100%), 2 = Cheap (50%).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TechCost {
+    /// 175% of base research cost per level.
     Expensive,
+    /// 100% of base research cost per level (standard).
     Normal,
+    /// 50% of base research cost per level (half price).
     Cheap,
 }
 
@@ -100,6 +103,25 @@ impl TechCost {
             _ => None,
         }
     }
+}
+
+// ── Leftover spend ────────────────────────────────────────────────────────────
+
+/// How the race designer spent leftover advantage points.
+/// Stored at payload byte 69 of the .r1 type-6 block.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum LeftoverSpend {
+    #[default]
+    #[serde(rename = "surface_minerals")]
+    SurfaceMinerals,
+    #[serde(rename = "mineral_concentrations")]
+    MineralConcentrations,
+    #[serde(rename = "mines")]
+    Mines,
+    #[serde(rename = "factories")]
+    Factories,
+    #[serde(rename = "defenses")]
+    Defenses,
 }
 
 // ── Habitat preferences ───────────────────────────────────────────────────────
@@ -165,6 +187,10 @@ pub struct ResearchCosts {
     pub construction: TechCost,
     pub electronics: TechCost,
     pub biotechnology: TechCost,
+    /// "Expensive Tech Boost" flag: fields set to Expensive start at tech level 3.
+    /// Byte 81 bit 5 in the .r1 payload.  Costs 60 advantage points.
+    #[serde(default)]
+    pub expensive_tech_start_at_3: bool,
 }
 
 // ── Race ──────────────────────────────────────────────────────────────────────
@@ -179,5 +205,7 @@ pub struct Race {
     pub hab: HabPreferences,
     pub economy: Economy,
     pub research_costs: ResearchCosts,
+    #[serde(default)]
+    pub leftover_spend: LeftoverSpend,
     pub icon_index: u32,
 }

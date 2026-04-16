@@ -1,5 +1,6 @@
 // Game object types: Planet, Universe, Fleet, Player, Race, Technology, etc.
 
+pub mod advantage_points;
 pub mod fleet;
 pub mod planet;
 pub mod player;
