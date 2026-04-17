@@ -633,8 +633,8 @@ pub fn advantage_points(race: &Race) -> i32 {
         }
     }
 
-    // Expensive Tech Boost flag: starts Expensive fields at tech level 3.
-    if race.research_costs.expensive_tech_start_at_3 {
+    // Expensive Tech Boost flag: starts Expensive fields at tech level 4.
+    if race.research_costs.expensive_tech_start_at_4 {
         points -= 180;
     }
 
@@ -711,7 +711,7 @@ mod tests {
                 construction: TechCost::Normal,
                 electronics: TechCost::Normal,
                 biotechnology: TechCost::Cheap,
-                expensive_tech_start_at_3: false,
+                expensive_tech_start_at_4: false,
             },
             leftover_spend: Default::default(),
             icon_index: 0,

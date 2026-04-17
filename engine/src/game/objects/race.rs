@@ -204,10 +204,10 @@ pub struct ResearchCosts {
     pub construction: TechCost,
     pub electronics: TechCost,
     pub biotechnology: TechCost,
-    /// "Expensive Tech Boost" flag: fields set to Expensive start at tech level 3.
-    /// Byte 81 bit 5 in the .r1 payload.  Costs 60 advantage points.
+    /// "Expensive Tech Boost" flag: fields set to Expensive start at tech level 4.
+    /// Byte 81 bit 5 in the .r1 payload.  Costs 180 advantage points.
     #[serde(default)]
-    pub expensive_tech_start_at_3: bool,
+    pub expensive_tech_start_at_4: bool,
 }
 
 // ── Race ──────────────────────────────────────────────────────────────────────
