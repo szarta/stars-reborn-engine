@@ -24,7 +24,8 @@ async fn main() {
         addr
     );
 
-    let app = stars_engine::http::router();
+    let state = stars_engine::http::AppState::new();
+    let app = stars_engine::http::router(state);
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await
