@@ -634,7 +634,7 @@ pub fn advantage_points(race: &Race) -> i32 {
     }
 
     // Expensive Tech Boost flag: starts Expensive fields at tech level 4.
-    if race.research_costs.expensive_tech_start_at_4 {
+    if race.research_costs.expensive_tech_boost {
         points -= 180;
     }
 
@@ -711,7 +711,7 @@ mod tests {
                 construction: TechCost::Normal,
                 electronics: TechCost::Normal,
                 biotechnology: TechCost::Cheap,
-                expensive_tech_start_at_4: false,
+                expensive_tech_boost: false,
             },
             leftover_spend: Default::default(),
             icon_index: 0,
@@ -722,6 +722,69 @@ mod tests {
     fn test_rabbitoid_advantage_points() {
         // Oracle: Stars! race editor shows 32 for this race design.
         assert_eq!(advantage_points(&rabbitoid()), 32);
+    }
+
+    /// Insectoid: oracle-confirmed values from default Stars! race file.
+    /// Original game shows 43 leftover advantage points.
+    fn insectoid() -> Race {
+        Race {
+            format_version: 1,
+            name: "Insectoid".into(),
+            plural_name: "Insectoids".into(),
+            prt: Prt::Wm,
+            lrts: vec![Lrt::ISB, Lrt::CE, Lrt::RS],
+            hab: HabPreferences {
+                gravity: HabAxis {
+                    immune: true,
+                    min: None,
+                    max: None,
+                    min_idx: None,
+                    max_idx: None,
+                },
+                temperature: HabAxis {
+                    immune: false,
+                    min: Some(-200.0),
+                    max: Some(200.0),
+                    min_idx: Some(0),
+                    max_idx: Some(100),
+                },
+                radiation: HabAxis {
+                    immune: false,
+                    min: Some(70.0),
+                    max: Some(100.0),
+                    min_idx: Some(70),
+                    max_idx: Some(100),
+                },
+            },
+            economy: Economy {
+                resource_production: 1000,
+                factory_production: 10,
+                factory_cost: 10,
+                factory_cheap_germanium: false,
+                colonists_operate_factories: 10,
+                mine_production: 9,
+                mine_cost: 10,
+                colonists_operate_mines: 6,
+                growth_rate: 10,
+            },
+            research_costs: ResearchCosts {
+                energy: TechCost::Cheap,
+                weapons: TechCost::Cheap,
+                propulsion: TechCost::Cheap,
+                construction: TechCost::Cheap,
+                electronics: TechCost::Normal,
+                biotechnology: TechCost::Expensive,
+                expensive_tech_boost: false,
+            },
+            leftover_spend: Default::default(),
+            icon_index: 3,
+        }
+    }
+
+    #[test]
+    fn test_insectoid_advantage_points() {
+        // Oracle: Stars! race editor shows 43 for the default Insectoid.
+        assert_eq!(advantage_points(&insectoid()), 43);
     }
 
     /// Verify that the raw-index fallback still works: without min_idx/max_idx
@@ -737,5 +800,198 @@ mod tests {
         // (not 10) because both share the same centi-g value.  The resulting
         // advantage point total is off by 4.
         assert_eq!(advantage_points(&race), 28);
+    }
+
+    /// Helper for the remaining predefined-race tests.
+    fn hab_ranged(min_i: u32, max_i: u32) -> HabAxis {
+        HabAxis {
+            immune: false,
+            min: None,
+            max: None,
+            min_idx: Some(min_i),
+            max_idx: Some(max_i),
+        }
+    }
+
+    fn hab_immune() -> HabAxis {
+        HabAxis {
+            immune: true,
+            min: None,
+            max: None,
+            min_idx: None,
+            max_idx: None,
+        }
+    }
+
+    /// Humanoid: the default JOAT race.  Oracle: 25 leftover advantage points.
+    fn humanoid() -> Race {
+        Race {
+            format_version: 1,
+            name: "Humanoid".into(),
+            plural_name: "Humanoids".into(),
+            prt: Prt::Joat,
+            lrts: vec![],
+            hab: HabPreferences {
+                gravity: hab_ranged(15, 85),
+                temperature: hab_ranged(15, 85),
+                radiation: hab_ranged(15, 85),
+            },
+            economy: Economy {
+                resource_production: 1000,
+                factory_production: 10,
+                factory_cost: 10,
+                factory_cheap_germanium: false,
+                colonists_operate_factories: 10,
+                mine_production: 10,
+                mine_cost: 5,
+                colonists_operate_mines: 10,
+                growth_rate: 15,
+            },
+            research_costs: ResearchCosts {
+                energy: TechCost::Normal,
+                weapons: TechCost::Normal,
+                propulsion: TechCost::Normal,
+                construction: TechCost::Normal,
+                electronics: TechCost::Normal,
+                biotechnology: TechCost::Normal,
+                expensive_tech_boost: false,
+            },
+            leftover_spend: Default::default(),
+            icon_index: 0,
+        }
+    }
+
+    #[test]
+    fn test_humanoid_advantage_points() {
+        assert_eq!(advantage_points(&humanoid()), 25);
+    }
+
+    /// Antetheral: SD race.  Oracle: 7 leftover advantage points.
+    fn antetheral() -> Race {
+        Race {
+            format_version: 1,
+            name: "Antetheral".into(),
+            plural_name: "Antheherals".into(),
+            prt: Prt::Sd,
+            lrts: vec![Lrt::ARM, Lrt::MA, Lrt::NRE, Lrt::CE, Lrt::NAS],
+            hab: HabPreferences {
+                gravity: hab_ranged(0, 30),
+                temperature: hab_ranged(0, 100),
+                radiation: hab_ranged(70, 100),
+            },
+            economy: Economy {
+                resource_production: 700,
+                factory_production: 11,
+                factory_cost: 10,
+                factory_cheap_germanium: false,
+                colonists_operate_factories: 18,
+                mine_production: 10,
+                mine_cost: 10,
+                colonists_operate_mines: 10,
+                growth_rate: 7,
+            },
+            research_costs: ResearchCosts {
+                energy: TechCost::Cheap,
+                weapons: TechCost::Expensive,
+                propulsion: TechCost::Cheap,
+                construction: TechCost::Cheap,
+                electronics: TechCost::Cheap,
+                biotechnology: TechCost::Cheap,
+                expensive_tech_boost: false,
+            },
+            leftover_spend: Default::default(),
+            icon_index: 17,
+        }
+    }
+
+    #[test]
+    fn test_antetheral_advantage_points() {
+        assert_eq!(advantage_points(&antetheral()), 7);
+    }
+
+    /// Nucleotid: SS race.  Oracle: 11 leftover advantage points.
+    fn nucleotid() -> Race {
+        Race {
+            format_version: 1,
+            name: "Nucleotid".into(),
+            plural_name: "Nucleotids".into(),
+            prt: Prt::Ss,
+            lrts: vec![Lrt::ARM, Lrt::ISB],
+            hab: HabPreferences {
+                gravity: hab_immune(),
+                temperature: hab_ranged(12, 88),
+                radiation: hab_ranged(0, 100),
+            },
+            economy: Economy {
+                resource_production: 900,
+                factory_production: 10,
+                factory_cost: 10,
+                factory_cheap_germanium: false,
+                colonists_operate_factories: 10,
+                mine_production: 10,
+                mine_cost: 15,
+                colonists_operate_mines: 5,
+                growth_rate: 10,
+            },
+            research_costs: ResearchCosts {
+                energy: TechCost::Expensive,
+                weapons: TechCost::Expensive,
+                propulsion: TechCost::Expensive,
+                construction: TechCost::Expensive,
+                electronics: TechCost::Expensive,
+                biotechnology: TechCost::Expensive,
+                expensive_tech_boost: true,
+            },
+            leftover_spend: Default::default(),
+            icon_index: 24,
+        }
+    }
+
+    #[test]
+    fn test_nucleotid_advantage_points() {
+        assert_eq!(advantage_points(&nucleotid()), 11);
+    }
+
+    /// Silicanoid: HE race (all-immune).  Oracle: 9 leftover advantage points.
+    fn silicanoid() -> Race {
+        Race {
+            format_version: 1,
+            name: "Silicanoid".into(),
+            plural_name: "Silicanoids".into(),
+            prt: Prt::He,
+            lrts: vec![Lrt::IFE, Lrt::UR, Lrt::OBRM, Lrt::BET],
+            hab: HabPreferences {
+                gravity: hab_immune(),
+                temperature: hab_immune(),
+                radiation: hab_immune(),
+            },
+            economy: Economy {
+                resource_production: 800,
+                factory_production: 12,
+                factory_cost: 12,
+                factory_cheap_germanium: false,
+                colonists_operate_factories: 15,
+                mine_production: 10,
+                mine_cost: 9,
+                colonists_operate_mines: 10,
+                growth_rate: 6,
+            },
+            research_costs: ResearchCosts {
+                energy: TechCost::Normal,
+                weapons: TechCost::Normal,
+                propulsion: TechCost::Cheap,
+                construction: TechCost::Cheap,
+                electronics: TechCost::Normal,
+                biotechnology: TechCost::Expensive,
+                expensive_tech_boost: false,
+            },
+            leftover_spend: Default::default(),
+            icon_index: 4,
+        }
+    }
+
+    #[test]
+    fn test_silicanoid_advantage_points() {
+        assert_eq!(advantage_points(&silicanoid()), 9);
     }
 }
