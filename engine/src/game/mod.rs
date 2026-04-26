@@ -9,6 +9,7 @@
 pub mod ai;
 pub mod combat;
 pub mod objects;
+pub mod score;
 pub mod state;
 pub mod turn;
 pub mod universe;
