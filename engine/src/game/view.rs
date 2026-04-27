@@ -37,7 +37,8 @@ use crate::game::state::GameState;
 /// indicates current ground-truth values, anything higher is stale.
 ///
 /// Untagged on the wire: clients distinguish by whether contents fields are
-/// present.
+/// present. Field names are kebab-case to match the project schema convention
+/// — see stars-reborn-schemas/response-turn-file.json.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PlanetIntel {
@@ -46,6 +47,7 @@ pub enum PlanetIntel {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct PlanetUnobserved {
     pub id: u32,
     pub name: String,
@@ -54,6 +56,7 @@ pub struct PlanetUnobserved {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct PlanetObserved {
     pub id: u32,
     pub name: String,
@@ -92,7 +95,9 @@ pub struct PlanetObserved {
 /// A player's complete turn-file view.
 ///
 /// Everything in this struct is safe to serialise to player `player_id`.
+/// Field names are kebab-case to match the project schema convention.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct PlayerView {
     pub year: u32,
     pub game_id: String,
