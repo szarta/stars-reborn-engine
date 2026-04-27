@@ -14,8 +14,9 @@
 //   GET /model/ships/hulls                          — all hull definitions
 //   GET /model/schemas                              — JSON schemas for all request/response types
 //
-//   POST /games                                     — create new game
-//   GET  /games/{game_id}                           — game metadata
+//   POST   /games                                   — create new game
+//   GET    /games/{game_id}                         — game metadata
+//   DELETE /games/{game_id}                         — remove game (memory + disk)
 //   GET  /games/{game_id}/turns/{year}/status       — per-player submission status
 //   GET  /games/{game_id}/turns/{year}/players/{pid}— turn file for player
 //   PUT  /games/{game_id}/turns/{year}/orders/{pid} — submit player orders (idempotent)
@@ -90,7 +91,7 @@ pub fn router(state: AppState) -> Router {
         .route("/race/validate", post(race_validate))
         // Game endpoints (stateful)
         .route("/games", post(create_game))
-        .route("/games/:game_id", get(get_game))
+        .route("/games/:game_id", get(get_game).delete(delete_game))
         .route("/games/:game_id/turns/:year/status", get(turn_status))
         .route(
             "/games/:game_id/turns/:year/players/:pid",
@@ -444,6 +445,50 @@ async fn get_game(State(state): State<AppState>, Path(game_id): Path<String>) ->
             Json(json!({"error": "game not found"})),
         )
             .into_response(),
+    }
+}
+
+/// DELETE /games/{game_id} — remove a game from memory and disk.
+///
+/// Returns 204 if anything was removed (in-memory or on-disk), 404 if neither
+/// existed. Idempotent on the gone-state — a second DELETE returns 404.
+///
+/// Rejects request paths that are not valid UUIDs to prevent path traversal
+/// against the data dir.
+async fn delete_game(
+    State(state): State<AppState>,
+    Path(game_id): Path<String>,
+) -> impl IntoResponse {
+    if uuid::Uuid::parse_str(&game_id).is_err() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "invalid game_id"})),
+        )
+            .into_response();
+    }
+
+    let in_memory = state.games.write().unwrap().remove(&game_id).is_some();
+
+    let on_disk = match crate::store::delete_game(&game_id) {
+        Ok(removed) => removed,
+        Err(e) => {
+            log::error!("Failed to delete game dir for {}: {}", game_id, e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "failed to delete game directory"})),
+            )
+                .into_response();
+        }
+    };
+
+    if in_memory || on_disk {
+        StatusCode::NO_CONTENT.into_response()
+    } else {
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "game not found"})),
+        )
+            .into_response()
     }
 }
 

@@ -10,7 +10,7 @@
 //          ./engine_data                           (fallback if HOME unset)
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use log::{error, info, warn};
 
@@ -49,6 +49,32 @@ pub fn save_game(game: &GameState) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // ---------------------------------------------------------------------------
+// Delete
+// ---------------------------------------------------------------------------
+
+/// Remove a game's on-disk directory.
+///
+/// Returns `Ok(true)` if the directory existed and was removed, `Ok(false)`
+/// if no directory was present (idempotent — the caller may still treat the
+/// request as successful if the in-memory copy was removed).
+///
+/// The caller is responsible for validating `game_id` to prevent path
+/// traversal; this function joins it onto the data dir as-is.
+pub fn delete_game(game_id: &str) -> std::io::Result<bool> {
+    delete_game_in(&data_dir(), game_id)
+}
+
+fn delete_game_in(base: &Path, game_id: &str) -> std::io::Result<bool> {
+    let game_dir = base.join(game_id);
+    if !game_dir.exists() {
+        return Ok(false);
+    }
+    fs::remove_dir_all(&game_dir)?;
+    info!("Deleted game directory {}", game_dir.display());
+    Ok(true)
+}
+
+// ---------------------------------------------------------------------------
 // Load
 // ---------------------------------------------------------------------------
 
@@ -83,4 +109,48 @@ pub fn load_all_games() -> Vec<GameState> {
         }
     }
     games
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn unique_test_base() -> PathBuf {
+        let pid = std::process::id();
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        std::env::temp_dir().join(format!("stars-reborn-test-{pid}-{nanos}"))
+    }
+
+    #[test]
+    fn delete_returns_false_when_directory_missing() {
+        let base = unique_test_base();
+        fs::create_dir_all(&base).unwrap();
+        assert!(
+            !delete_game_in(&base, "no-such-game").unwrap(),
+            "missing game dir should return Ok(false), not error"
+        );
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn delete_removes_existing_game_directory() {
+        let base = unique_test_base();
+        let game_id = "abcdef01-2345-6789-abcd-ef0123456789";
+        let game_dir = base.join(game_id);
+        fs::create_dir_all(game_dir.join("nested")).unwrap();
+        fs::write(game_dir.join("game.json"), "{}").unwrap();
+        fs::write(game_dir.join("nested/extra.txt"), "data").unwrap();
+
+        assert!(game_dir.exists());
+        assert!(delete_game_in(&base, game_id).unwrap());
+        assert!(!game_dir.exists());
+
+        // Idempotent: a second call returns Ok(false).
+        assert!(!delete_game_in(&base, game_id).unwrap());
+
+        let _ = fs::remove_dir_all(&base);
+    }
 }
