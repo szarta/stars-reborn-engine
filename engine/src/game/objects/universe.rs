@@ -1,12 +1,17 @@
 // engine/src/game/objects/universe.rs
 //
-// The Universe data model: the full set of space objects for a game.
+// Universe — the static, shared map data (.xy-equivalent).
+//
+// Holds only data that is safe to expose to every player at /universe:
+// boundary dimensions, density bucket, and the static identity/position of
+// each planet. Mutable per-game planet state lives in `GameState::planet_states`,
+// not here.
 
 use std::collections::HashMap;
 
-use super::planet::Planet;
+use super::planet::PlanetStatic;
 
-/// A generated universe: boundary dimensions and the full planet set.
+/// The static, shared map for a game.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Universe {
     /// Universe size constant (0=Tiny … 4=Huge)
@@ -14,8 +19,9 @@ pub struct Universe {
     /// Side length of the square boundary in light years
     pub width: u32,
     pub height: u32,
-    /// All planets, keyed by planet id (1-indexed)
-    pub planets: HashMap<u32, Planet>,
+    /// All planets, keyed by planet id (1-indexed). Identity + position only;
+    /// see `GameState::planet_states` for hab/ownership/population/etc.
+    pub planets: HashMap<u32, PlanetStatic>,
 }
 
 impl Universe {
@@ -24,8 +30,8 @@ impl Universe {
         self.planets.len()
     }
 
-    /// Return a list of all Planet objects (order not guaranteed).
-    pub fn planet_list(&self) -> Vec<&Planet> {
+    /// Return a list of all PlanetStatic objects (order not guaranteed).
+    pub fn planet_list(&self) -> Vec<&PlanetStatic> {
         self.planets.values().collect()
     }
 }

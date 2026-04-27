@@ -349,7 +349,9 @@ async fn create_game(
     let num_ai = gp.ai_players.as_ref().map(|v| v.len()).unwrap_or(0) as u32;
     let num_players = num_human + num_ai;
 
-    let mut universe = generate_universe(size_idx, density_idx, num_players, None);
+    let generated = generate_universe(size_idx, density_idx, num_players, None);
+    let universe = generated.universe;
+    let mut planet_states = generated.planet_states;
 
     // Sort planet ids so homeworld assignment is deterministic
     let mut planet_ids: Vec<u32> = universe.planets.keys().copied().collect();
@@ -361,12 +363,12 @@ async fn create_game(
     for (slot, hp) in gp.human_players.iter().enumerate() {
         let homeworld_id = planet_ids.get(slot).copied();
         if let Some(hw_id) = homeworld_id {
-            if let Some(planet) = universe.planets.get_mut(&hw_id) {
-                planet.homeworld = true;
-                planet.owner = Some(hp.id);
-                planet.population = 25_000;
-                planet.factories = 10;
-                planet.mines = 10;
+            if let Some(state) = planet_states.get_mut(&hw_id) {
+                state.homeworld = true;
+                state.owner = Some(hp.id);
+                state.population = 25_000;
+                state.factories = 10;
+                state.mines = 10;
             }
         }
         players.push(Player {
@@ -384,12 +386,12 @@ async fn create_game(
         let ai_id = slot as u32;
         let homeworld_id = planet_ids.get(slot).copied();
         if let Some(hw_id) = homeworld_id {
-            if let Some(planet) = universe.planets.get_mut(&hw_id) {
-                planet.homeworld = true;
-                planet.owner = Some(ai_id);
-                planet.population = 25_000;
-                planet.factories = 10;
-                planet.mines = 10;
+            if let Some(state) = planet_states.get_mut(&hw_id) {
+                state.homeworld = true;
+                state.owner = Some(ai_id);
+                state.population = 25_000;
+                state.factories = 10;
+                state.mines = 10;
             }
         }
         players.push(Player {
@@ -405,6 +407,7 @@ async fn create_game(
         id: game_id.clone(),
         name: gp.name,
         universe,
+        planet_states,
         players,
         year: 2400,
     };
@@ -525,19 +528,24 @@ async fn get_turn_file(
         }
     };
 
-    // MVP: return all planets (no fog-of-war filtering yet)
+    // MVP: return all planets (no fog-of-war filtering yet).
+    // PlayerView derivation (the future leak-safe choke point) lives in
+    // game/view.rs once added; this handler will switch to it at that time.
     let mut planets: Vec<TurnPlanet> = game
         .universe
         .planets
         .values()
-        .map(|p| TurnPlanet {
-            id: p.id,
-            name: p.name.clone(),
-            x: p.x,
-            y: p.y,
-            homeworld: p.homeworld,
-            owner: p.owner,
-            population: p.population,
+        .map(|p| {
+            let state = game.planet_states.get(&p.id);
+            TurnPlanet {
+                id: p.id,
+                name: p.name.clone(),
+                x: p.x,
+                y: p.y,
+                homeworld: state.map(|s| s.homeworld).unwrap_or(false),
+                owner: state.and_then(|s| s.owner),
+                population: state.map(|s| s.population).unwrap_or(0),
+            }
         })
         .collect();
     planets.sort_by_key(|p| p.id);
