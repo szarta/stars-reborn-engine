@@ -13,3 +13,4 @@ pub mod score;
 pub mod state;
 pub mod turn;
 pub mod universe;
+pub mod view;

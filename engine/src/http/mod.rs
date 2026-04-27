@@ -42,6 +42,7 @@ use crate::game::objects::{
 };
 use crate::game::state::GameState;
 use crate::game::universe::generate_universe;
+use crate::game::view::player_view;
 
 // ---------------------------------------------------------------------------
 // Shared application state
@@ -257,28 +258,9 @@ struct UniverseResponse {
 // Turn file response types  (.m equivalent — private, per-player)
 // ---------------------------------------------------------------------------
 
-/// A planet entry in the player's turn file.
-/// Includes ownership and population for planets the player can observe.
-#[derive(Serialize)]
-struct TurnPlanet {
-    id: u32,
-    name: String,
-    x: i32,
-    y: i32,
-    homeworld: bool,
-    owner: Option<u32>,
-    population: u32,
-}
-
-#[derive(Serialize)]
-struct TurnResponse {
-    year: u32,
-    game_id: String,
-    game_name: String,
-    player_id: u32,
-    homeworld_id: Option<u32>,
-    planets: Vec<TurnPlanet>,
-}
+// The per-player turn-file response shape lives in `game::view::PlayerView`,
+// produced by the single `player_view()` choke point. The handler below
+// serialises it directly — there is no http-layer intermediate type.
 
 // ---------------------------------------------------------------------------
 // Game handlers
@@ -517,48 +499,16 @@ async fn get_turn_file(
         }
     };
 
-    let player = match game.players.iter().find(|p| p.id == pid) {
-        Some(p) => p,
-        None => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({"error": "player not found"})),
-            )
-                .into_response()
-        }
-    };
+    if !game.players.iter().any(|p| p.id == pid) {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "player not found"})),
+        )
+            .into_response();
+    }
 
-    // MVP: return all planets (no fog-of-war filtering yet).
-    // PlayerView derivation (the future leak-safe choke point) lives in
-    // game/view.rs once added; this handler will switch to it at that time.
-    let mut planets: Vec<TurnPlanet> = game
-        .universe
-        .planets
-        .values()
-        .map(|p| {
-            let state = game.planet_states.get(&p.id);
-            TurnPlanet {
-                id: p.id,
-                name: p.name.clone(),
-                x: p.x,
-                y: p.y,
-                homeworld: state.map(|s| s.homeworld).unwrap_or(false),
-                owner: state.and_then(|s| s.owner),
-                population: state.map(|s| s.population).unwrap_or(0),
-            }
-        })
-        .collect();
-    planets.sort_by_key(|p| p.id);
-
-    let response = TurnResponse {
-        year: game.year,
-        game_id: game.id.clone(),
-        game_name: game.name.clone(),
-        player_id: player.id,
-        homeworld_id: player.homeworld_id,
-        planets,
-    };
-    Json(response).into_response()
+    let view = player_view(game, pid);
+    Json(view).into_response()
 }
 
 /// PUT /games/{game_id}/turns/{year}/orders/{pid} — submit player orders
