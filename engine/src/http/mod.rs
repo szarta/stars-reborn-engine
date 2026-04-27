@@ -237,6 +237,9 @@ struct CreateGameResponse {
 
 /// A planet entry in the universe file: position and name only.
 /// No owner, population, or player-specific state — those belong in the turn file.
+///
+/// Field names are kebab-case to match the project schema convention — see
+/// stars-reborn-schemas/response-game.json.
 #[derive(Serialize)]
 struct UniversePlanet {
     id: u32,
@@ -246,6 +249,7 @@ struct UniversePlanet {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "kebab-case")]
 struct UniverseResponse {
     game_id: String,
     game_name: String,
