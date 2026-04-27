@@ -40,6 +40,7 @@ use crate::game::objects::{
     advantage_points::advantage_points,
     player::{Player, TechLevels},
     race::Race,
+    race_defaults::default_race_by_name,
 };
 use crate::game::state::GameState;
 use crate::game::universe::generate_universe;
@@ -288,14 +289,15 @@ fn parse_density(s: &str) -> Option<u32> {
     }
 }
 
-fn race_name_from_value(v: &Value) -> String {
+/// Resolve a `race` field from a CreateGameRequest into a full `Race`.
+///
+/// String → look up in the predefined registry (Humanoid, Insectoid, …).
+/// Object → deserialize directly (race wizard / custom races).
+/// On failure, returns `None`; the caller should reject the request.
+fn resolve_race(v: &Value) -> Option<Race> {
     match v {
-        Value::String(s) => s.clone(),
-        obj => obj
-            .get("singular-name")
-            .and_then(|n| n.as_str())
-            .unwrap_or("Unknown")
-            .to_string(),
+        Value::String(name) => default_race_by_name(name),
+        obj => serde_json::from_value::<Race>(obj.clone()).ok(),
     }
 }
 
@@ -344,6 +346,21 @@ async fn create_game(
 
     // Assign homeworlds to human players
     for (slot, hp) in gp.human_players.iter().enumerate() {
+        let race = match resolve_race(&hp.race) {
+            Some(r) => r,
+            None => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "error": format!(
+                            "could not resolve race for player {}: not in predefined registry and not a valid Race object",
+                            hp.id,
+                        ),
+                    })),
+                )
+                    .into_response();
+            }
+        };
         let homeworld_id = planet_ids.get(slot).copied();
         if let Some(hw_id) = homeworld_id {
             if let Some(state) = planet_states.get_mut(&hw_id) {
@@ -352,21 +369,26 @@ async fn create_game(
                 state.population = 25_000;
                 state.factories = 10;
                 state.mines = 10;
+                state.set_homeworld_hab(&race);
             }
         }
         players.push(Player {
             id: hp.id,
-            race_name: race_name_from_value(&hp.race),
+            race_name: race.name.clone(),
             homeworld_id,
             tech: TechLevels::default(),
+            race: Some(race),
         });
     }
 
-    // Assign homeworlds to AI players
+    // Assign homeworlds to AI players. AI races default to Humanoid until the
+    // AI difficulty selector is wired through to a race choice.
     let human_count = gp.human_players.len();
     for (ai_slot, _ai) in gp.ai_players.as_ref().unwrap_or(&vec![]).iter().enumerate() {
         let slot = human_count + ai_slot;
         let ai_id = slot as u32;
+        let race =
+            default_race_by_name("Humanoid").expect("Humanoid is always in the default registry");
         let homeworld_id = planet_ids.get(slot).copied();
         if let Some(hw_id) = homeworld_id {
             if let Some(state) = planet_states.get_mut(&hw_id) {
@@ -375,6 +397,7 @@ async fn create_game(
                 state.population = 25_000;
                 state.factories = 10;
                 state.mines = 10;
+                state.set_homeworld_hab(&race);
             }
         }
         players.push(Player {
@@ -382,6 +405,7 @@ async fn create_game(
             race_name: "AI".to_string(),
             homeworld_id,
             tech: TechLevels::default(),
+            race: Some(race),
         });
     }
 

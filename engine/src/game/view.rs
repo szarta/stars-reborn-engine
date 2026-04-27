@@ -21,11 +21,13 @@
 // As scanner mechanics land, the only place that needs updating is the
 // `is_observable` predicate inside `player_view()`.
 
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
+use crate::game::objects::advantage_points::{
+    axis_to_idx, grav_to_idx, planet_habitability, rad_to_idx, temp_to_idx,
+};
 use crate::game::objects::planet::{PlanetState, PlanetStatic};
+use crate::game::objects::race::Race;
 use crate::game::state::GameState;
 
 /// A player's view of one planet.
@@ -80,6 +82,11 @@ pub struct PlanetObserved {
     pub population: u32,
     pub factories: u32,
     pub mines: u32,
+
+    /// Planet value as a percent (0..100 = habitable; negative = red, capped
+    /// at -45). Computed against the **viewing player's** race. Different
+    /// players see different values for the same planet.
+    pub value: i32,
 }
 
 /// A player's complete turn-file view.
@@ -103,6 +110,7 @@ pub struct PlayerView {
 /// integration test in `tests/player_view_leak.rs` is the safety net.
 pub fn player_view(state: &GameState, player_id: u32) -> PlayerView {
     let player = state.players.iter().find(|p| p.id == player_id);
+    let race = player.and_then(|p| p.race.as_ref());
 
     let mut planet_ids: Vec<u32> = state.universe.planets.keys().copied().collect();
     planet_ids.sort();
@@ -112,7 +120,7 @@ pub fn player_view(state: &GameState, player_id: u32) -> PlayerView {
         .filter_map(|id| {
             let static_ = state.universe.planets.get(&id)?;
             let pstate = state.planet_states.get(&id);
-            Some(intel_for(static_, pstate, player_id, &state.planet_states))
+            Some(intel_for(static_, pstate, player_id, race))
         })
         .collect();
 
@@ -126,6 +134,32 @@ pub fn player_view(state: &GameState, player_id: u32) -> PlayerView {
     }
 }
 
+/// Compute planet value (0..100 habitable, negative red) for a planet against
+/// the given race. Returns 0 when the race is unknown — the safer default for
+/// pre-existing saves missing the optional Race field on Player.
+fn compute_value(s: &PlanetState, race: Option<&Race>) -> i32 {
+    let Some(race) = race else {
+        return 0;
+    };
+    let is_immune = [
+        race.hab.gravity.immune,
+        race.hab.temperature.immune,
+        race.hab.radiation.immune,
+    ];
+    let (glo, ghi) = axis_to_idx(&race.hab.gravity, 0);
+    let (tlo, thi) = axis_to_idx(&race.hab.temperature, 1);
+    let (rlo, rhi) = axis_to_idx(&race.hab.radiation, 2);
+    let hab_low = [glo, tlo, rlo];
+    let hab_high = [ghi, thi, rhi];
+    let hab_center = [(glo + ghi) / 2, (tlo + thi) / 2, (rlo + rhi) / 2];
+    let planet_hab = [
+        grav_to_idx(s.gravity as f64),
+        temp_to_idx(s.temperature as f64),
+        rad_to_idx(s.radiation as f64),
+    ];
+    planet_habitability(&is_immune, &hab_low, &hab_high, &hab_center, &planet_hab) as i32
+}
+
 /// Decide whether `player_id` can currently observe this planet, and emit
 /// the matching `PlanetIntel` variant.
 ///
@@ -137,7 +171,7 @@ fn intel_for(
     static_: &PlanetStatic,
     pstate: Option<&PlanetState>,
     player_id: u32,
-    _all_states: &HashMap<u32, PlanetState>,
+    race: Option<&Race>,
 ) -> PlanetIntel {
     let observable = matches!(pstate, Some(s) if s.owner == Some(player_id));
 
@@ -162,6 +196,7 @@ fn intel_for(
             population: s.population,
             factories: s.factories,
             mines: s.mines,
+            value: compute_value(s, race),
         }),
         _ => PlanetIntel::Unobserved(PlanetUnobserved {
             id: static_.id,

@@ -23,7 +23,7 @@ const STARTING_POINTS: i64 = 1650;
 
 /// Gravity_Map: index 0-100 → centi-g.  Mirrors race.rs decode table.
 #[rustfmt::skip]
-const GRAV_CENTI: [u16; 101] = [
+pub const GRAV_CENTI: [u16; 101] = [
      12,  12,  13,  13,  14,  14,  15,  15,  16,  17,  //   0-9
      17,  18,  19,  20,  21,  22,  24,  25,  27,  29,  //  10-19
      31,  33,  36,  40,  44,  50,  51,  52,  53,  54,  //  20-29
@@ -37,7 +37,7 @@ const GRAV_CENTI: [u16; 101] = [
     800,                                                 //    100
 ];
 
-fn grav_to_idx(g: f64) -> i32 {
+pub fn grav_to_idx(g: f64) -> i32 {
     let centi = (g * 100.0).round() as i32;
     GRAV_CENTI
         .iter()
@@ -47,12 +47,30 @@ fn grav_to_idx(g: f64) -> i32 {
         .unwrap_or(50)
 }
 
-fn temp_to_idx(temp: f64) -> i32 {
+pub fn temp_to_idx(temp: f64) -> i32 {
     (temp / 4.0 + 50.0).round().clamp(0.0, 100.0) as i32
 }
 
-fn rad_to_idx(rad: f64) -> i32 {
+pub fn rad_to_idx(rad: f64) -> i32 {
     rad.round().clamp(0.0, 100.0) as i32
+}
+
+/// Inverse of `grav_to_idx`: index 0-100 → physical gravity in g.
+pub fn idx_to_grav(idx: i32) -> f64 {
+    let i = idx.clamp(0, 100) as usize;
+    GRAV_CENTI[i] as f64 / 100.0
+}
+
+/// Inverse of `temp_to_idx`: index 0-100 → temperature in °C, snapped to 4°
+/// steps (-200..200).
+pub fn idx_to_temp(idx: i32) -> i32 {
+    let i = idx.clamp(0, 100);
+    -200 + i * 4
+}
+
+/// Inverse of `rad_to_idx`: index 0-100 → radiation in mR/yr.
+pub fn idx_to_rad(idx: i32) -> i32 {
+    idx.clamp(0, 100)
 }
 
 /// Convert a HabAxis to (low_idx, high_idx) in 0-100 index space.
@@ -63,7 +81,7 @@ fn rad_to_idx(rad: f64) -> i32 {
 /// several adjacent indices share the same display value (e.g. both index 9 and
 /// index 10 decode to 0.17 g).  Wizard-created races that omit the raw fields
 /// fall back to the physical-value conversion.
-fn axis_to_idx(axis: &HabAxis, axis_type: usize) -> (i32, i32) {
+pub fn axis_to_idx(axis: &HabAxis, axis_type: usize) -> (i32, i32) {
     if axis.immune {
         return (50, 50);
     }
@@ -85,7 +103,7 @@ fn axis_to_idx(axis: &HabAxis, axis_type: usize) -> (i32, i32) {
 ///
 /// All values are in the 0-100 index space.
 /// Returns 0-100 for habitable planets, negative (capped at -45) for red planets.
-fn planet_habitability(
+pub fn planet_habitability(
     is_immune: &[bool; 3],
     hab_low: &[i32; 3],
     hab_high: &[i32; 3],
@@ -650,135 +668,19 @@ pub fn advantage_points(race: &Race) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::game::objects::race::{
-        Economy, HabAxis, HabPreferences, Lrt, Prt, Race, ResearchCosts, TechCost,
-    };
+    //! The six predefined race factories used by these oracle tests now live in
+    //! `crate::game::objects::race_defaults` so the rest of the engine can call
+    //! them at runtime (e.g. to resolve a race name during create_game).
 
-    /// Build a minimal Race that matches the Rabbitoid default race from the
-    /// Stars! binary (.r1) file, including the raw gravity indices.
-    ///
-    /// The key regression case: Rabbitoid has gravity low = raw index 10, which
-    /// corresponds to 0.17 g.  GRAV_CENTI[9] == GRAV_CENTI[10] == 17, so a
-    /// naïve grav_to_idx(0.17) would return index 9 instead of 10, shifting
-    /// the hab center by 1 and producing a wrong advantage point total (28
-    /// instead of 32).  The raw index fields must be used to avoid this.
-    fn rabbitoid() -> Race {
-        Race {
-            format_version: 1,
-            name: "Rabbitoid".into(),
-            plural_name: "Rabbitoids".into(),
-            prt: Prt::It,
-            lrts: vec![Lrt::IFE, Lrt::TT, Lrt::CE, Lrt::NAS],
-            hab: HabPreferences {
-                gravity: HabAxis {
-                    immune: false,
-                    min: Some(0.17),
-                    max: Some(1.24),
-                    min_idx: Some(10), // raw .r1 byte — MUST be 10, not 9
-                    max_idx: Some(56),
-                },
-                temperature: HabAxis {
-                    immune: false,
-                    min: Some(-60.0),
-                    max: Some(124.0),
-                    min_idx: Some(35),
-                    max_idx: Some(81),
-                },
-                radiation: HabAxis {
-                    immune: false,
-                    min: Some(13.0),
-                    max: Some(53.0),
-                    min_idx: Some(13),
-                    max_idx: Some(53),
-                },
-            },
-            economy: Economy {
-                resource_production: 1000,
-                factory_production: 10,
-                factory_cost: 9,
-                factory_cheap_germanium: true,
-                colonists_operate_factories: 17,
-                mine_production: 10,
-                mine_cost: 9,
-                colonists_operate_mines: 10,
-                growth_rate: 20,
-            },
-            research_costs: ResearchCosts {
-                energy: TechCost::Expensive,
-                weapons: TechCost::Expensive,
-                propulsion: TechCost::Cheap,
-                construction: TechCost::Normal,
-                electronics: TechCost::Normal,
-                biotechnology: TechCost::Cheap,
-                expensive_tech_boost: false,
-            },
-            leftover_spend: Default::default(),
-            icon_index: 0,
-        }
-    }
+    use super::*;
+    use crate::game::objects::race_defaults::{
+        antetheral, humanoid, insectoid, nucleotid, rabbitoid, silicanoid,
+    };
 
     #[test]
     fn test_rabbitoid_advantage_points() {
         // Oracle: Stars! race editor shows 32 for this race design.
         assert_eq!(advantage_points(&rabbitoid()), 32);
-    }
-
-    /// Insectoid: oracle-confirmed values from default Stars! race file.
-    /// Original game shows 43 leftover advantage points.
-    fn insectoid() -> Race {
-        Race {
-            format_version: 1,
-            name: "Insectoid".into(),
-            plural_name: "Insectoids".into(),
-            prt: Prt::Wm,
-            lrts: vec![Lrt::ISB, Lrt::CE, Lrt::RS],
-            hab: HabPreferences {
-                gravity: HabAxis {
-                    immune: true,
-                    min: None,
-                    max: None,
-                    min_idx: None,
-                    max_idx: None,
-                },
-                temperature: HabAxis {
-                    immune: false,
-                    min: Some(-200.0),
-                    max: Some(200.0),
-                    min_idx: Some(0),
-                    max_idx: Some(100),
-                },
-                radiation: HabAxis {
-                    immune: false,
-                    min: Some(70.0),
-                    max: Some(100.0),
-                    min_idx: Some(70),
-                    max_idx: Some(100),
-                },
-            },
-            economy: Economy {
-                resource_production: 1000,
-                factory_production: 10,
-                factory_cost: 10,
-                factory_cheap_germanium: false,
-                colonists_operate_factories: 10,
-                mine_production: 9,
-                mine_cost: 10,
-                colonists_operate_mines: 6,
-                growth_rate: 10,
-            },
-            research_costs: ResearchCosts {
-                energy: TechCost::Cheap,
-                weapons: TechCost::Cheap,
-                propulsion: TechCost::Cheap,
-                construction: TechCost::Cheap,
-                electronics: TechCost::Normal,
-                biotechnology: TechCost::Expensive,
-                expensive_tech_boost: false,
-            },
-            leftover_spend: Default::default(),
-            icon_index: 3,
-        }
     }
 
     #[test]
@@ -802,106 +704,9 @@ mod tests {
         assert_eq!(advantage_points(&race), 28);
     }
 
-    /// Helper for the remaining predefined-race tests.
-    fn hab_ranged(min_i: u32, max_i: u32) -> HabAxis {
-        HabAxis {
-            immune: false,
-            min: None,
-            max: None,
-            min_idx: Some(min_i),
-            max_idx: Some(max_i),
-        }
-    }
-
-    fn hab_immune() -> HabAxis {
-        HabAxis {
-            immune: true,
-            min: None,
-            max: None,
-            min_idx: None,
-            max_idx: None,
-        }
-    }
-
-    /// Humanoid: the default JOAT race.  Oracle: 25 leftover advantage points.
-    fn humanoid() -> Race {
-        Race {
-            format_version: 1,
-            name: "Humanoid".into(),
-            plural_name: "Humanoids".into(),
-            prt: Prt::Joat,
-            lrts: vec![],
-            hab: HabPreferences {
-                gravity: hab_ranged(15, 85),
-                temperature: hab_ranged(15, 85),
-                radiation: hab_ranged(15, 85),
-            },
-            economy: Economy {
-                resource_production: 1000,
-                factory_production: 10,
-                factory_cost: 10,
-                factory_cheap_germanium: false,
-                colonists_operate_factories: 10,
-                mine_production: 10,
-                mine_cost: 5,
-                colonists_operate_mines: 10,
-                growth_rate: 15,
-            },
-            research_costs: ResearchCosts {
-                energy: TechCost::Normal,
-                weapons: TechCost::Normal,
-                propulsion: TechCost::Normal,
-                construction: TechCost::Normal,
-                electronics: TechCost::Normal,
-                biotechnology: TechCost::Normal,
-                expensive_tech_boost: false,
-            },
-            leftover_spend: Default::default(),
-            icon_index: 0,
-        }
-    }
-
     #[test]
     fn test_humanoid_advantage_points() {
         assert_eq!(advantage_points(&humanoid()), 25);
-    }
-
-    /// Antetheral: SD race.  Oracle: 7 leftover advantage points.
-    fn antetheral() -> Race {
-        Race {
-            format_version: 1,
-            name: "Antetheral".into(),
-            plural_name: "Antheherals".into(),
-            prt: Prt::Sd,
-            lrts: vec![Lrt::ARM, Lrt::MA, Lrt::NRE, Lrt::CE, Lrt::NAS],
-            hab: HabPreferences {
-                gravity: hab_ranged(0, 30),
-                temperature: hab_ranged(0, 100),
-                radiation: hab_ranged(70, 100),
-            },
-            economy: Economy {
-                resource_production: 700,
-                factory_production: 11,
-                factory_cost: 10,
-                factory_cheap_germanium: false,
-                colonists_operate_factories: 18,
-                mine_production: 10,
-                mine_cost: 10,
-                colonists_operate_mines: 10,
-                growth_rate: 7,
-            },
-            research_costs: ResearchCosts {
-                energy: TechCost::Cheap,
-                weapons: TechCost::Expensive,
-                propulsion: TechCost::Cheap,
-                construction: TechCost::Cheap,
-                electronics: TechCost::Cheap,
-                biotechnology: TechCost::Cheap,
-                expensive_tech_boost: false,
-            },
-            leftover_spend: Default::default(),
-            icon_index: 17,
-        }
     }
 
     #[test]
@@ -909,85 +714,9 @@ mod tests {
         assert_eq!(advantage_points(&antetheral()), 7);
     }
 
-    /// Nucleotid: SS race.  Oracle: 11 leftover advantage points.
-    fn nucleotid() -> Race {
-        Race {
-            format_version: 1,
-            name: "Nucleotid".into(),
-            plural_name: "Nucleotids".into(),
-            prt: Prt::Ss,
-            lrts: vec![Lrt::ARM, Lrt::ISB],
-            hab: HabPreferences {
-                gravity: hab_immune(),
-                temperature: hab_ranged(12, 88),
-                radiation: hab_ranged(0, 100),
-            },
-            economy: Economy {
-                resource_production: 900,
-                factory_production: 10,
-                factory_cost: 10,
-                factory_cheap_germanium: false,
-                colonists_operate_factories: 10,
-                mine_production: 10,
-                mine_cost: 15,
-                colonists_operate_mines: 5,
-                growth_rate: 10,
-            },
-            research_costs: ResearchCosts {
-                energy: TechCost::Expensive,
-                weapons: TechCost::Expensive,
-                propulsion: TechCost::Expensive,
-                construction: TechCost::Expensive,
-                electronics: TechCost::Expensive,
-                biotechnology: TechCost::Expensive,
-                expensive_tech_boost: true,
-            },
-            leftover_spend: Default::default(),
-            icon_index: 24,
-        }
-    }
-
     #[test]
     fn test_nucleotid_advantage_points() {
         assert_eq!(advantage_points(&nucleotid()), 11);
-    }
-
-    /// Silicanoid: HE race (all-immune).  Oracle: 9 leftover advantage points.
-    fn silicanoid() -> Race {
-        Race {
-            format_version: 1,
-            name: "Silicanoid".into(),
-            plural_name: "Silicanoids".into(),
-            prt: Prt::He,
-            lrts: vec![Lrt::IFE, Lrt::UR, Lrt::OBRM, Lrt::BET],
-            hab: HabPreferences {
-                gravity: hab_immune(),
-                temperature: hab_immune(),
-                radiation: hab_immune(),
-            },
-            economy: Economy {
-                resource_production: 800,
-                factory_production: 12,
-                factory_cost: 12,
-                factory_cheap_germanium: false,
-                colonists_operate_factories: 15,
-                mine_production: 10,
-                mine_cost: 9,
-                colonists_operate_mines: 10,
-                growth_rate: 6,
-            },
-            research_costs: ResearchCosts {
-                energy: TechCost::Normal,
-                weapons: TechCost::Normal,
-                propulsion: TechCost::Cheap,
-                construction: TechCost::Cheap,
-                electronics: TechCost::Normal,
-                biotechnology: TechCost::Expensive,
-                expensive_tech_boost: false,
-            },
-            leftover_spend: Default::default(),
-            icon_index: 4,
-        }
     }
 
     #[test]

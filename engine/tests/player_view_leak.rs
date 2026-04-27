@@ -13,6 +13,7 @@
 // the wire payload.
 
 use stars_engine::game::objects::player::{Player, TechLevels};
+use stars_engine::game::objects::race_defaults::humanoid;
 use stars_engine::game::state::GameState;
 use stars_engine::game::universe::generate_universe;
 use stars_engine::game::view::{player_view, PlanetIntel, PlayerView};
@@ -33,6 +34,7 @@ fn two_player_game() -> GameState {
     let hw0 = planet_ids[0];
     let hw1 = planet_ids[1];
 
+    let race = humanoid();
     for (pid, hw_id) in [(PLAYER_0, hw0), (PLAYER_1, hw1)] {
         let s = planet_states.get_mut(&hw_id).unwrap();
         s.homeworld = true;
@@ -40,6 +42,7 @@ fn two_player_game() -> GameState {
         s.population = 25_000;
         s.factories = 10;
         s.mines = 10;
+        s.set_homeworld_hab(&race);
     }
 
     GameState {
@@ -53,12 +56,14 @@ fn two_player_game() -> GameState {
                 race_name: "Humanoid".to_string(),
                 homeworld_id: Some(hw0),
                 tech: TechLevels::default(),
+                race: Some(humanoid()),
             },
             Player {
                 id: PLAYER_1,
                 race_name: "Humanoid".to_string(),
                 homeworld_id: Some(hw1),
                 tech: TechLevels::default(),
+                race: Some(humanoid()),
             },
         ],
         year: 2400,
@@ -89,6 +94,12 @@ fn own_homeworld_is_observed_with_full_state() {
             assert_eq!(o.mines, 10);
             assert!(o.homeworld);
             assert_eq!(o.years_since_last_scan, 0);
+            // Homeworld hab is overridden to race centre, so the value of
+            // the homeworld for its owning race must be the maximum 100%.
+            assert_eq!(
+                o.value, 100,
+                "homeworld hab is centred on race tolerance — value should be 100%"
+            );
         }
         PlanetIntel::Unobserved(_) => panic!("own homeworld must be Observed"),
     }
@@ -155,6 +166,7 @@ fn unobserved_planets_serialize_without_host_fields() {
         "homeworld",
         "owner",
         "years_since_last_scan",
+        "value",
     ];
 
     let hw0 = game.players[0].homeworld_id.unwrap();

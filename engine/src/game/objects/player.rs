@@ -9,6 +9,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::race::Race;
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TechLevels {
     pub energy: u32,
@@ -25,4 +27,10 @@ pub struct Player {
     pub race_name: String,
     pub homeworld_id: Option<u32>,
     pub tech: TechLevels,
+    /// Full race definition. Optional for backwards compatibility — pre-existing
+    /// games may have been persisted without this field. New games always set
+    /// it; per-player view derivation (planet value, scanner ranges, etc.)
+    /// requires it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub race: Option<Race>,
 }
